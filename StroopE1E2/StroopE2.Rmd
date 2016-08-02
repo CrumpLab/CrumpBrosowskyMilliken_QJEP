@@ -1,0 +1,164 @@
+---
+title: "StroopE2"
+author: "Matt Crump"
+date: "August 2, 2016"
+output:
+  html_document:
+    toc: yes
+---
+
+```{r,echo=FALSE,message=FALSE,error=FALSE,warning=FALSE}
+library(ggplot2)
+library(Crump)
+library(heplots)
+library(Hmisc)
+library(plyr)
+library(tidyr)
+library(pander)
+library(xtable)
+library(etable)
+library(xlsx)
+require(knitr)
+library(pwr)
+```
+
+
+# E2 Typing and Button Responses
+
+## Transfer Items RT ANOVA
+
+```{r,,echo=FALSE}
+setwd("~/Dropbox/Research/ManuscriptsPublications/2016 CrumpBrosowskyMilliken QJEP/Analysis/Stroop/StroopRepository")
+AllData<-read.table("StroopE2.csv",sep=",",header=TRUE)
+
+AllData<-AllData[AllData$RT<5000,] #exclude all trials with RT greater than 10000ms
+AllData<-AllData[AllData$RT>100,] #exclude all trials with RT less than 100ms
+AllData<-AllData[AllData$Error==0,] #exclude all error trials
+AllData$Trial[AllData$Trial<(96*2)]<-"First"
+AllData$Trial[AllData$Trial!="First"]<-"Last"
+AllData$Exp<-factor(AllData$Exp)
+AllData$Trial<-factor(AllData$Trial)
+AllData$Subject<-factor(AllData$Subject)
+
+#conduct Van Selst & Jolicouer outlier elimination
+AllData<-ddply(AllData, .(Subject,Exp,Trial,Context,Proportion,Congruency),summarise,meanRT=mean(vjout(RT)$data),removed=vjout(RT)$pr)
+
+#Proportion of outliers removed from each condition
+#1-mean(AllData$removed)
+
+#Analyse only Transfer items
+#AllData<-AllData[AllData$Context=="Transfer",] 
+
+#Run ANOVA
+aov.out<-aov(meanRT~Exp*Context*Trial*Proportion*Congruency + Error(Subject/(Context*Trial*Proportion*Congruency)),AllData)
+kable(xtable(aov.out),format="markdown")
+
+```
+
+
+### Stroop and CSPC effects
+
+```{r}
+# Get means and SEs to build table
+
+SubjectStroop <-  ddply(AllData,.(Subject,Exp,Context,Trial,Proportion),summarise,
+                  Stroop=meanRT[Congruency=="Inc"]-meanRT[Congruency=="Con"])
+
+SubjectCSPC   <-  ddply(AllData,.(Subject,Exp,Context,Trial),summarise,
+                  CSPC=(meanRT[Proportion=="High" & Congruency=="Inc"]-
+                    meanRT[Proportion=="High" & Congruency=="Con"])-
+                    (meanRT[Proportion=="Low" & Congruency=="Inc"]-
+                    meanRT[Proportion=="Low" & Congruency=="Con"]))
+
+AllStroop     <-  ddply(SubjectStroop,.(Exp,Context,Trial,Proportion),summarise,
+                        mStroop=mean(Stroop),seStroop=stde(Stroop))
+
+AllCSPC     <-  ddply(SubjectCSPC,.(Exp,Context,Trial),summarise,
+                        mCSPC=mean(CSPC),seCSPC=stde(CSPC))
+
+kable(xtable(AllStroop),format="markdown")
+#write.xlsx(AllStroop,file="e2.xlsx",sheetName="Sheet2")
+
+kable(xtable(AllCSPC),format="markdown")
+#write.xlsx(AllCSPC,file="e2.xlsx",sheetName="Sheet3",append=TRUE)
+
+```
+
+### report means
+
+```{r}
+
+MeanAllData<-ddply(AllData,.(Exp,Trial,Context,Proportion,Congruency),summarise,RTs=mean(meanRT),SErt=stde(meanRT))
+MeanAllData
+
+MeanAllData<-ddply(AllData,.(Trial),summarise,RTs=mean(meanRT),SErt=stde(meanRT))
+MeanAllData
+
+MeanAllData<-ddply(AllData,.(Congruency),summarise,RTs=mean(meanRT),SErt=stde(meanRT))
+MeanAllData
+
+MeanAllData<-ddply(AllData,.(Exp,Congruency),summarise,RTs=mean(meanRT),SErt=stde(meanRT))
+MeanAllData
+
+StroopTyping<-MeanAllData[MeanAllData$Exp=="Typing" & MeanAllData$Congruency=="Inc",]$RT-
+            MeanAllData[MeanAllData$Exp=="Typing" & MeanAllData$Congruency=="Con",]$RT
+StroopTyping
+
+StroopButton<-MeanAllData[MeanAllData$Exp=="Button" & MeanAllData$Congruency=="Inc",]$RT-
+           MeanAllData[MeanAllData$Exp=="Button" & MeanAllData$Congruency=="Con",]$RT
+StroopButton
+
+MeanAllData<-ddply(AllData,.(Exp,Context,Trial,Proportion,Congruency),summarise,RTs=mean(meanRT),SErt=stde(meanRT))
+MeanAllDataRT<-MeanAllData
+kable(xtable(MeanAllData),format="markdown")
+
+```
+
+
+## Error Rate ANOVA
+
+```{r,echo=FALSE}
+#Whole-experiment Analysis
+AllData<-read.table("StroopE2.csv",sep=",",header=TRUE)
+
+AllData<-AllData[AllData$RT<5000,] #exclude all trials with RT greater than 10000ms
+#AllData<-AllData[AllData$RT>100,] #exclude all trials with RT less than 100ms
+#AllData<-AllData[AllData$Error==0,] #exclude all error trials
+AllData$Trial[AllData$Trial<(96*2)]<-"First"
+AllData$Trial[AllData$Trial!="First"]<-"Last"
+AllData$Exp<-factor(AllData$Exp)
+AllData$Trial<-factor(AllData$Trial)
+AllData$Subject<-factor(AllData$Subject)
+
+#conduct Van Selst & Jolicouer outlier elimination
+AllData<-ddply(AllData, .(Subject,Exp,Trial,Context,Proportion,Congruency),summarise,meanER=mean(Error))
+
+#Analyse only Transfer items
+#AllData<-AllData[AllData$Context=="Transfer",] 
+
+#Run ANOVA
+aov.out<-aov(meanER~Exp*Context*Trial*Proportion*Congruency + Error(Subject/(Context*Trial*Proportion*Congruency)),AllData)
+kable(xtable(aov.out),format="markdown")
+
+```
+
+## Tabular report: means
+
+```{r}
+
+MeanAllData<-ddply(AllData,.(Exp,Context,Trial,Proportion,Congruency),summarise,ER=mean(meanER))
+MeanAllData
+mean(MeanAllData$ER)
+
+MeanAllDataRT<-cbind(MeanAllDataRT,ER=MeanAllData$ER)
+
+Tab <- tabular.ade(x_vars=c('MEAN'), rows=c('Exp','Context','Trial','Proportion'), rnames= c('Experiment','Item','Half','Proportion'), y_vars=c('RTs','SErt','ER'),cols=c('Congruency'),cnames='Congruency',data=MeanAllDataRT, FUN=stat_cell)
+
+kable(xtable(Tab),format="markdown")
+#write.xlsx(Tab,file="e2.xlsx",sheetName="Sheet1",append=TRUE)
+
+MeanAllData<-ddply(AllData,.(Context,Proportion,Congruency),summarise,ER=mean(meanER))
+MeanAllData
+
+```
+
