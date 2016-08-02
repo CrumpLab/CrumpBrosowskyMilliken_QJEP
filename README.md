@@ -1,5 +1,5 @@
 # CrumpBrosowskyMilliken_QJEP
-This data repository contains the raw data for each experiment from:
+This data repository contains the raw data from Crump, Brosowsky, & Milliken (In Press). 
 
 Crump, M. J. C., Brosowsky, N., and Milliken, B. (In Press). Reproducing the location-based context-specific proportion congruent effect for frequency unbiased items: A reply to Hutcheon and Spieler (2016). Quarterly Journal of Experimental Psychology, OnlineFirst.
 
